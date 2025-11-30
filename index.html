@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HAYATİ KİMLİK | PRO</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --card-bg: #111111;
+            --blue: #00f3ff;
+            --red: #ff0055;
+            --green: #00ff9d;
+            --text: #ffffff;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Courier New', monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- EKRAN YÖNETİMİ --- */
+        .screen {
+            width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0;
+            display: none; flex-direction: column;
+            padding: 15px;
+            background: var(--bg);
+            overflow-y: auto;
+        }
+        .active { display: flex; animation: fadeIn 0.3s; }
+
+        /* --- AÇILIŞ (BOOT) --- */
+        #bootScreen { justify-content: center; align-items: center; z-index: 9999; }
+        .loader {
+            width: 60px; height: 60px;
+            border: 4px solid #333;
+            border-top: 4px solid var(--blue);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin-bottom: 20px;
+        }
+        
+        /* --- KART TASARIMI --- */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+        }
+
+        .avatar {
+            width: 100px; height: 100px; border-radius: 50%;
+            border: 3px solid var(--blue);
+            object-fit: cover;
+            margin-top: -10px;
+            background: #222;
+        }
+
+        .tag {
+            background: rgba(255,0,85,0.15); color: var(--red);
+            padding: 4px 10px; border-radius: 4px;
+            font-size: 12px; font-weight: bold;
+            border: 1px solid var(--red);
+            display: inline-block; margin: 5px;
+        }
+
+        /* --- BUTONLAR --- */
+        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        
+        .btn {
+            background: #222; border: 1px solid #444;
+            color: white; padding: 15px; border-radius: 10px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        .btn:active { background: #333; transform: scale(0.98); }
+        .btn-icon { font-size: 24px; margin-bottom: 5px; }
+
+        .sos-btn {
+            background: linear-gradient(45deg, #cc0000, #ff0055);
+            width: 100%; border: none; padding: 15px;
+            border-radius: 50px; color: white; font-size: 20px; font-weight: bold;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
+            animation: pulse 1.5s infinite;
+            margin-top: auto;
+        }
+
+        /* --- AI CHAT --- */
+        .chat-container { flex: 1; overflow-y: auto; padding: 10px; border: 1px solid #333; border-radius: 10px; margin-bottom: 10px; background: #050505; }
+        .msg { padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; line-height: 1.4; max-width: 90%; }
+        .bot { background: rgba(0, 243, 255, 0.1); border-left: 3px solid var(--blue); color: #ddd; align-self: flex-start; }
+        .user { background: rgba(0, 255, 157, 0.1); border-right: 3px solid var(--green); color: white; align-self: flex-end; text-align: right; margin-left: auto; }
+        .option-btn { background: #222; border: 1px solid var(--blue); color: var(--blue); padding: 10px; margin: 5px 0; width: 100%; text-align: left; border-radius: 5px; }
+
+        /* --- ADMIN PANEL --- */
+        .admin-field {
+            display: flex; justify-content: space-between;
+            padding: 10px; border-bottom: 1px dashed #333;
+            font-size: 13px;
+        }
+        .val { color: var(--green); text-align: right; width: 60%; }
+        .editing { border: 1px solid var(--blue); background: #1a1a1a; padding: 5px; }
+        .save-btn { background: var(--green); color: black; border: none; padding: 10px; width: 100%; font-weight: bold; margin-top: 10px; }
+
+        /* --- ANİMASYONLAR --- */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="bootScreen" class="screen active" onclick="forceStart()">
+        <div class="loader"></div>
+        <div style="color:var(--blue); font-size:12px; letter-spacing:2px; margin-top:10px;">SİSTEM BAŞLATILIYOR...</div>
+        <div style="color:#555; font-size:10px; margin-top:50px;">(Açılmazsa ekrana dokunun)</div>
+    </div>
+
+    <div id="mainScreen" class="screen">
+        <div style="position:absolute; top:10px; right:10px; font-size:24px; opacity:0.5;" onclick="openAdmin()">⚙️</div>
+        
+        <div class="card">
+            <img src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200" class="avatar" id="disp_img">
+            <h2 id="disp_name" style="margin:10px 0 5px;">YÜKLENİYOR...</h2>
+            <div id="disp_id" style="color:#666; font-size:12px;">ID: ...</div>
+            <div style="margin-top:15px;">
+                <span class="tag" id="disp_disease">...</span>
+                <span class="tag" style="border-color:var(--blue); color:var(--blue)" id="disp_blood">...</span>
+            </div>
+        </div>
+
+        <div class="grid-menu">
+            <div class="btn" onclick="startAI()">
+                <span class="btn-icon">🤖</span>
+                AI ASİSTAN
+            </div>
+            <div class="btn" onclick="openFamily()">
+                <span class="btn-icon">👨‍👩‍👧‍👦</span>
+                AİLE (5 Kişi)
+            </div>
+            <div class="btn" onclick="showMeds()">
+                <span class="btn-icon">💊</span>
+                İLAÇLAR
+            </div>
+            <div class="btn" onclick="sendLocation()">
+                <span class="btn-icon">📍</span>
+                KONUM AT
+            </div>
+        </div>
+
+        <button class="sos-btn" onclick="window.location.href='tel:112'">🆘 112 ACİL</button>
+    </div>
+
+    <div id="aiScreen" class="screen">
+        <h3 style="text-align:center; color:var(--blue); border-bottom:1px solid #333; padding-bottom:10px; margin-top:0;">AI TRİYAJ</h3>
+        <div class="chat-container" id="chatBox"></div>
+        <button class="btn" style="width:100%; margin-top:auto;" onclick="goHome()">ÇIKIŞ</button>
+    </div>
+
+    <div id="familyScreen" class="screen">
+        <h3 style="text-align:center; color:var(--green);">YAKINLARI</h3>
+        <div id="familyList" style="flex:1;"></div>
+        <button class="btn" style="width:100%;" onclick="goHome()">GERİ DÖN</button>
+    </div>
+
+    <div id="adminScreen" class="screen">
+        <h3 style="text-align:center; color:var(--red);">YÖNETİCİ PANELİ</h3>
+        <p style="font-size:10px; text-align:center; color:#666;">Bilgileri değiştirmek için üzerine tıklayın.</p>
+        
+        <div id="adminForm" style="flex:1; overflow-y:auto;">
+            </div>
+
+        <button class="save-btn" onclick="saveData()">KAYDET VE ÇIK</button>
+    </div>
+
+    <script>
+        /* --- VERİTABANI (TELEFONDA ÇALIŞAN) --- */
+        // İlk açılışta varsayılan veriler. Yönetici değiştirirse hafızada değişir.
+        let DB = {
+            name: "TALHA YILMAZ",
+            id: "TR-8824-X",
+            disease: "TİP 1 DİYABET",
+            blood: "A Rh+",
+            allergy: "PENİSİLİN",
+            meds: "Humalog (Yemekte), Lantus (Gece)",
+            contacts: [
+                { rel: "Anne", tel: "05551112233" },
+                { rel: "Baba", tel: "05554445566" },
+                { rel: "Kardeş", tel: "05557778899" },
+                { rel: "Doktor", tel: "02124440000" },
+                { rel: "Komşu", tel: "05550001122" }
+            ],
+            private: {
+                tc: "12345678901",
+                note: "Hasta glukagon iğnesine yanıt verir.",
+                insurance: "Allianz Sigorta"
+            }
+        };
+
+        /* --- SİSTEM BAŞLATMA --- */
+        // Sayfa yüklenince otomatik çalışır
+        window.onload = () => {
+            // Veriyi ekrana bas
+            renderMain();
+            // 1.5 saniye sonra açılış ekranını kapat
+            setTimeout(() => {
+                document.getElementById('bootScreen').style.display = 'none';
+                document.getElementById('mainScreen').classList.add('active');
+            }, 1500);
+        };
+
+        // Donarsa tıklayarak açmak için
+        function forceStart() {
+            document.getElementById('bootScreen').style.display = 'none';
+            document.getElementById('mainScreen').classList.add('active');
+        }
+
+        /* --- EKRAN YÖNETİMİ --- */
+        function goHome() {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            document.getElementById('mainScreen').style.display = 'flex';
+        }
+
+        function renderMain() {
+            document.getElementById('disp_name').innerText = DB.name;
+            document.getElementById('disp_id').innerText = "ID: " + DB.id;
+            document.getElementById('disp_disease').innerText = "⚠️ " + DB.disease;
+            document.getElementById('disp_blood').innerText = DB.blood;
+        }
+
+        /* --- İŞLEVLER --- */
+        function showMeds() {
+            alert("İLAÇLAR:\n" + DB.meds + "\n\nALERJİLER:\n" + DB.allergy);
+        }
+
+        function sendLocation() {
+            alert("Konumunuz (41.0082, 28.9784) belirlendi.\nAileye SMS olarak gönderiliyor...");
+        }
+
+        /* --- AİLE LİSTESİ --- */
+        function openFamily() {
+            let html = "";
+            DB.contacts.forEach(c => {
+                html += `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; margin-bottom:10px;">
+                    <div style="text-align:left;">
+                        <div style="color:var(--blue); font-weight:bold;">${c.rel}</div>
+                        <div style="font-size:14px; color:#aaa;">${c.tel}</div>
+                    </div>
+                    <button style="background:var(--green); border:none; padding:10px; border-radius:5px; font-weight:bold;" onclick="window.location.href='tel:${c.tel}'">ARA</button>
+                </div>`;
+            });
+            document.getElementById('familyList').innerHTML = html;
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            document.getElementById('familyScreen').style.display = 'flex';
+        }
+
+        /* --- GELİŞMİŞ YAPAY ZEKA (AI) --- */
+        function startAI() {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            document.getElementById('aiScreen').style.display = 'flex';
+            document.getElementById('chatBox').innerHTML = "";
+            
+            aiSpeak(`Merhaba. Hastamız ${DB.name} için acil durum analizi yapıyorum. Hastanın şu anki durumu nedir?`, [
+                {txt: "BAYGIN / HAREKETSİZ", val: "baygin"},
+                {txt: "NÖBET GEÇİRİYOR", val: "nobet"},
+                {txt: "ŞEKER / DİYABET KRİZİ", val: "seker"},
+                {txt: "GÖĞÜS AĞRISI (KALP)", val: "kalp"}
+            ]);
+        }
+
+        function aiSpeak(msg, options) {
+            const box = document.getElementById('chatBox');
+            // Bot mesajı
+            box.innerHTML += `<div class="msg bot">${msg}</div>`;
+            
+            // Seçenekler
+            if(options) {
+                options.forEach(opt => {
+                    box.innerHTML += `<button class="option-btn" onclick="aiResponse('${opt.val}')">➤ ${opt.txt}</button>`;
+                });
+            }
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function aiResponse(val) {
+            // Kullanıcı seçimi silinip chat devam etsin diye butonları temizleyebiliriz ama basitlik için devam ediyoruz.
+            const box = document.getElementById('chatBox');
+            // Kullanıcı mesajı simülasyonu
+            // box.innerHTML += `<div class="msg user">Seçim: ${val}</div>`;
+
+            if(val === "baygin") {
+                aiSpeak("Solunum kontrolü yapın. Nefes alıyor mu?", [
+                    {txt: "EVET, ALIYOR", val: "nefes_var"},
+                    {txt: "HAYIR, ALMIYOR", val: "nefes_yok"}
+                ]);
+            } else if (val === "nefes_var") {
+                aiSpeak("✅ İYİ HABER. Hastayı YAN ÇEVİRİN (Koma Pozisyonu). Kusarsa boğulmasın. Başından ayrılmayın.", null);
+            } else if (val === "nefes_yok") {
+                aiSpeak("🚨 KIRMIZI ALARM! Hemen kalp masajına başlayın ve 112'yi hoparlöre alarak arayın!", null);
+            } 
+            
+            else if (val === "nobet") {
+                aiSpeak("Sakin olun. Başını koruyun. Ağzına bir şey soktunuz mu?", [
+                    {txt: "HAYIR (DOĞRUSU BU)", val: "agiz_bos"},
+                    {txt: "EVET (KAŞIK VB.)", val: "agiz_dolu"}
+                ]);
+            } else if (val === "agiz_bos") {
+                aiSpeak("✅ SÜPER. Sadece izleyin, nöbet 5 dakikayı geçerse 112'yi arayın.", null);
+            } else if (val === "agiz_dolu") {
+                aiSpeak("❌ TEHLİKE! Çıkarmaya çalışırken dişlerini kırabilirsiniz. Lütfen bir daha yapmayın. Hastayı yan çevirin.", null);
+            }
+
+            else if (val === "seker") {
+                aiSpeak("Hastanın bilinci açık mı? Yutkunabiliyor mu?", [
+                    {txt: "EVET", val: "seker_acik"},
+                    {txt: "HAYIR", val: "seker_kapali"}
+                ]);
+            } else if (val === "seker_acik") {
+                aiSpeak("✅ HİPOGLİSEMİ. Hemen meyve suyu veya 3-4 kesme şeker verin.", null);
+            } else if (val === "seker_kapali") {
+                aiSpeak("🚨 KOMA RİSKİ. Ağızdan bir şey vermeyin! Yan çevirin ve 112'yi arayın. Glukagon iğnesi varsa yapın.", null);
+            }
+        }
+
+        /* --- YÖNETİCİ PANELİ (DÜZENLEME) --- */
+        function openAdmin() {
+            let pass = prompt("Yönetici Şifresi Girin:");
+            if(pass === "01Talha55") {
+                renderAdmin();
+                document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                document.getElementById('adminScreen').style.display = 'flex';
+            } else {
+                alert("Hatalı Şifre!");
+            }
+        }
+
+        function renderAdmin() {
+            let form = document.getElementById('adminForm');
+            let html = `<div style="color:#aaa; font-size:12px; margin-bottom:10px;">TEMEL BİLGİLER</div>`;
+            
+            // Temel Bilgiler
+            html += createInput("Ad Soyad", "name", DB.name);
+            html += createInput("Hastalık", "disease", DB.disease);
+            html += createInput("Kan Grubu", "blood", DB.blood);
+            html += createInput("İlaçlar", "meds", DB.meds);
+
+            html += `<div style="color:#aaa; font-size:12px; margin:20px 0 10px 0;">ÖZEL VERİLER (GİZLİ)</div>`;
+            html += createInput("TC Kimlik", "tc", DB.private.tc);
+            html += createInput("Sigorta", "insurance", DB.private.insurance);
+            html += createInput("Doktor Notu", "note", DB.private.note);
+
+            form.innerHTML = html;
+        }
+
+        function createInput(label, key, val) {
+            return `
+            <div class="admin-field">
+                <span>${label}:</span>
+                <div class="val" contenteditable="true" id="edit_${key}" style="border-bottom:1px solid #444;">${val}</div>
+            </div>`;
+        }
+
+        function saveData() {
+            // Verileri HTML'den geri çekip DB'ye kaydetme simülasyonu
+            DB.name = document.getElementById('edit_name').innerText;
+            DB.disease = document.getElementById('edit_disease').innerText;
+            DB.blood = document.getElementById('edit_blood').innerText;
+            DB.meds = document.getElementById('edit_meds').innerText;
+            DB.private.tc = document.getElementById('edit_tc').innerText;
+            DB.private.note = document.getElementById('edit_note').innerText;
+            DB.private.insurance = document.getElementById('edit_insurance').innerText;
+
+            alert("Veriler Güncellendi!");
+            goHome();
+            renderMain(); // Ana ekranı yenile
+        }
+
+    </script>
+</body>
+</html>
